@@ -1,28 +1,51 @@
-const express = require('express')
-const next = require('next')
+const {
+  ApolloServer,
+  makeExecutableSchema,
+  gql,
+} = require("apollo-server-express");
+const express = require("express");
+const next = require("next");
 
-const port = parseInt(process.env.PORT, 10) || 3000
-const dev = process.env.NODE_ENV !== 'production'
-const app = next({ dev })
-const handle = app.getRequestHandler()
+const port = parseInt(process.env.PORT, 10) || 3000;
+const dev = process.env.NODE_ENV !== "production";
+const app = next({ dev });
+const handle = app.getRequestHandler();
+
+const typeDefs = gql`
+  type Query {
+    users: [User!]!
+  }
+  type User {
+    name: String
+  }
+`;
+
+const resolvers = {
+  Query: {
+    users() {
+      return [{ name: "Nextjs" }];
+    },
+  },
+};
+
+const schema = makeExecutableSchema({
+  typeDefs,
+  resolvers,
+});
 
 app.prepare().then(() => {
-  const server = express()
+  const path = "/api";
 
-  server.get('/a', (req, res) => {
-    return app.render(req, res, '/a', req.query)
-  })
+  const server = express();
 
-  server.get('/b', (req, res) => {
-    return app.render(req, res, '/b', req.query)
-  })
+  const apolloServer = new ApolloServer({ schema });
 
-  server.all('*', (req, res) => {
-    return handle(req, res)
-  })
+  apolloServer.applyMiddleware({ app: server, path });
+
+  server.all("*", (req, res) => handle(req, res));
 
   server.listen(port, (err) => {
-    if (err) throw err
-    console.log(`> Ready on http://localhost:${port}`)
-  })
-})
+    if (err) throw err;
+    console.log(`> Ready on http://localhost:${port}`);
+  });
+});
